@@ -1,109 +1,164 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Watermark</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <header class="hero">
-        <p class="eyebrow">Browser-only watermarking</p>
-        <h1>Watermark</h1>
-        <p class="summary">
-          Upload an image, tune a repeated watermark pattern, and download the result.
-          The full workflow stays local in your browser on desktop and mobile.
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watermark</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.min.css" onerror="this.onerror=null;this.href='style.css'">
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-header-left">
+      <div class="app-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+          <g fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 6l-8.5 8.5"/>
+            <path d="M12.5 14.5c-2.2 2.2-3.5 4-3.5 6a5 5 0 0 0 10 0c0-2-1.3-3.8-3.5-6l-1.5-1.5z" fill="rgba(255,255,255,0.25)"/>
+            <path d="M11 23.5c1-.6 2.5-.6 3.5 0s2.5.6 3.5 0" stroke-width="1.3"/>
+          </g>
+        </svg>
+      </div>
+      <h1 class="app-title">Watermark</h1>
+    </div>
+    <div class="app-header-right">
+      <button id="theme-toggle" class="header-btn" aria-label="Toggle dark mode"></button>
+    </div>
+  </header>
+
+  <!-- App Body -->
+  <div class="app-body">
+
+    <!-- Sidebar Controls (LEFT) -->
+    <aside class="sidebar">
+
+      <!-- Text -->
+      <div class="sidebar-section">
+        <div class="section-label">Watermark Text</div>
+        <div class="control-group">
+          <input type="text" id="wm-text" class="input-text" placeholder="CONFIDENTIAL" maxlength="100">
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="sidebar-section">
+        <div class="section-label">Appearance</div>
+
+        <div class="control-group">
+          <div class="control-label">Color</div>
+          <div class="color-row">
+            <div class="color-swatch">
+              <input type="color" id="wm-color" value="#ffffff">
+            </div>
+            <input type="text" id="wm-color-hex" class="color-hex-input" value="#ffffff" spellcheck="false" maxlength="7">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Opacity</span>
+            <span class="control-value" id="wm-opacity-value">0.15</span>
+          </div>
+          <div class="range-wrapper">
+            <input type="range" id="wm-opacity" min="0.05" max="1" step="0.05" value="0.15">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Font Size</span>
+            <span class="control-value" id="wm-fontsize-value">30</span>
+          </div>
+          <div class="range-wrapper">
+            <input type="range" id="wm-fontsize" min="10" max="72" step="1" value="30">
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout -->
+      <div class="sidebar-section">
+        <div class="section-label">Pattern</div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Density</span>
+            <span class="control-value" id="wm-density-value">13</span>
+          </div>
+          <div class="range-wrapper">
+            <input type="range" id="wm-density" min="1" max="15" step="1" value="13">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="control-label">
+            <span>Rotation</span>
+            <span class="control-value" id="wm-rotation-value">-30&deg;</span>
+          </div>
+          <div class="range-wrapper">
+            <input type="range" id="wm-rotation" min="-90" max="90" step="1" value="-30">
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="sidebar-actions">
+        <button id="download-btn" class="btn btn--primary" disabled>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+          </svg>
+          Download PNG
+        </button>
+        <button id="reset-btn" class="btn btn--ghost">Reset Settings</button>
+      </div>
+
+    </aside>
+
+    <!-- Canvas Area (RIGHT) -->
+    <div class="canvas-area">
+      <input type="file" id="file-input" accept="image/*" hidden>
+
+      <!-- Upload Zone -->
+      <div id="upload-zone" class="upload-zone">
+        <div class="upload-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+          </svg>
+        </div>
+        <p class="upload-zone__text">Drop your document here, or click to browse</p>
+        <p class="upload-zone__subtext">
+          Supports KTP, SIM, Passport images<br>
+          Paste from clipboard with <span class="upload-zone__kbd">Ctrl+V</span>
         </p>
-      </header>
+      </div>
 
-      <main class="layout">
-        <section class="panel controls-panel" aria-labelledby="controls-heading">
-          <div class="panel-heading">
-            <h2 id="controls-heading">Controls</h2>
-            <p class="panel-copy">Adjust the watermark pattern and export the current preview.</p>
-          </div>
+      <!-- Canvas Preview -->
+      <div id="preview-container" class="preview-container" hidden>
+        <div class="canvas-wrapper">
+          <canvas id="preview-canvas"></canvas>
+        </div>
+        <div class="preview-actions">
+          <button id="clear-image" class="btn btn--danger-ghost btn--small">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+            </svg>
+            Remove
+          </button>
+        </div>
+      </div>
 
-          <form id="watermark-form" class="controls-grid">
-            <div class="status-card" aria-live="polite">
-              <p class="status-title">Processing stays local</p>
-              <p class="status-copy">The selected image never leaves your browser. No backend and no cloud storage are used.</p>
-            </div>
-
-            <label class="control control-wide">
-              <span class="control-label">Watermark text</span>
-              <input id="watermark-text" name="watermark-text" type="text" maxlength="80" value="CONFIDENTIAL" />
-            </label>
-
-            <label class="control">
-              <span class="control-label">Text color</span>
-              <input id="watermark-color" name="watermark-color" type="color" value="#ffffff" />
-            </label>
-
-            <label class="control">
-              <span class="control-label">Font size</span>
-              <input id="font-size" name="font-size" type="number" min="10" max="160" step="1" value="36" />
-            </label>
-
-            <label class="control control-wide">
-              <span class="control-label">Opacity <output id="opacity-output" for="opacity">0.18</output></span>
-              <input id="opacity" name="opacity" type="range" min="0.04" max="0.9" step="0.01" value="0.18" />
-            </label>
-
-            <label class="control control-wide">
-              <span class="control-label">Angle <output id="angle-output" for="angle">-32°</output></span>
-              <input id="angle" name="angle" type="range" min="-180" max="180" step="1" value="-32" />
-            </label>
-
-            <label class="control control-wide">
-              <span class="control-label">Pattern density <output id="density-output" for="density">55%</output></span>
-              <input id="density" name="density" type="range" min="10" max="100" step="1" value="55" />
-              <span class="control-hint">Lower density makes fewer watermark repeats. Higher density packs more text across the image.</span>
-            </label>
-
-            <label class="control control-wide">
-              <span class="control-label">Download format</span>
-              <select id="download-format" name="download-format">
-                <option value="image/png">PNG</option>
-                <option value="image/jpeg">JPEG</option>
-                <option value="image/webp">WebP</option>
-              </select>
-            </label>
-
-            <div class="actions control-wide">
-              <button id="download-button" class="action-button" type="button" disabled>Download image</button>
-              <button id="reset-button" class="action-button action-button-secondary" type="button">Reset controls</button>
-            </div>
-          </form>
-        </section>
-
-        <section class="panel preview-panel" aria-labelledby="preview-heading">
-          <div class="panel-heading panel-heading-row">
-            <div>
-              <h2 id="preview-heading">Preview</h2>
-              <p class="panel-copy">Drop an image here or tap the area to choose one. The canvas reflects the exact output that will be downloaded.</p>
-            </div>
-            <div class="image-meta" id="image-meta">No image loaded</div>
-          </div>
-
-          <input id="image-upload" name="image-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden />
-
-          <div id="preview-frame" class="preview-frame" role="button" tabindex="0" aria-label="Drop an image here or activate to choose an image">
-            <button id="clear-image-button" class="clear-image-button" type="button" hidden aria-label="Remove image">×</button>
-            <div id="preview-placeholder" class="preview-placeholder">
-              <div class="placeholder-copy">
-                <strong>Drop image here</strong>
-                <span>or click to choose a PNG, JPEG, or WebP file</span>
-              </div>
-            </div>
-            <canvas id="preview-canvas" class="preview-canvas" hidden></canvas>
-          </div>
-
-          <p id="error-message" class="error-message" hidden></p>
-        </section>
-      </main>
+      <div class="app-footer">
+        All processing happens locally in your browser — no data leaves your device.<br>
+        This website was built with the assistance of AI.
+      </div>
     </div>
 
-    <script src="app.js"></script>
-  </body>
+  </div>
+
+  <script src="app.min.js" onerror="var s=document.createElement('script');s.src='app.js';document.body.appendChild(s);"></script>
+</body>
 </html>

@@ -1,430 +1,521 @@
-const defaults = {
-  text: "CONFIDENTIAL",
-  color: "#ffffff",
-  fontSize: 36,
-  opacity: 0.18,
-  angle: -32,
-  density: 55,
-  format: "image/png",
+/* ===== Config ===== */
+const CONFIG = {
+  STORAGE_KEY: 'watermark_app_state',
+  THEME_KEY: 'watermark_theme',
+  TTL_MS: 24 * 60 * 60 * 1000,
+  MAX_DIM: 4096,
+  DEFAULTS: {
+    text: 'CONFIDENTIAL',
+    color: '#ffffff',
+    opacity: 0.15,
+    density: 13,
+    rotation: -30,
+    fontSize: 30,
+  },
 };
 
-const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
+const SUN_SVG = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>';
+const MOON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>';
 
+/* ===== DOM ===== */
+const $ = (s) => document.querySelector(s);
+const els = {
+  themeToggle: null,
+  uploadZone: null,
+  fileInput: null,
+  previewContainer: null,
+  canvas: null,
+  clearBtn: null,
+  text: null,
+  color: null,
+  colorHex: null,
+  opacity: null,
+  opacityValue: null,
+  density: null,
+  densityValue: null,
+  rotation: null,
+  rotationValue: null,
+  fontSize: null,
+  fontSizeValue: null,
+  downloadBtn: null,
+  resetBtn: null,
+};
+
+function cacheDom() {
+  els.themeToggle = $('#theme-toggle');
+  els.uploadZone = $('#upload-zone');
+  els.fileInput = $('#file-input');
+  els.previewContainer = $('#preview-container');
+  els.canvas = $('#preview-canvas');
+  els.clearBtn = $('#clear-image');
+  els.text = $('#wm-text');
+  els.color = $('#wm-color');
+  els.colorHex = $('#wm-color-hex');
+  els.opacity = $('#wm-opacity');
+  els.opacityValue = $('#wm-opacity-value');
+  els.density = $('#wm-density');
+  els.densityValue = $('#wm-density-value');
+  els.rotation = $('#wm-rotation');
+  els.rotationValue = $('#wm-rotation-value');
+  els.fontSize = $('#wm-fontsize');
+  els.fontSizeValue = $('#wm-fontsize-value');
+  els.downloadBtn = $('#download-btn');
+  els.resetBtn = $('#reset-btn');
+}
+
+/* ===== State ===== */
 const state = {
-  image: null,
-  objectUrl: null,
-  exportCanvas: null,
-  resizeFrame: 0,
+  imageDataURL: null,
+  imageElement: null,
+  settings: { ...CONFIG.DEFAULTS },
+  previewScale: 1.0,
 };
 
-const elements = {};
-
-window.addEventListener("DOMContentLoaded", () => {
-  bindElements();
-  bindEvents();
-  syncOutputs();
-});
-
-function bindElements() {
-  elements.form = document.getElementById("watermark-form");
-  elements.upload = document.getElementById("image-upload");
-  elements.text = document.getElementById("watermark-text");
-  elements.color = document.getElementById("watermark-color");
-  elements.fontSize = document.getElementById("font-size");
-  elements.opacity = document.getElementById("opacity");
-  elements.opacityOutput = document.getElementById("opacity-output");
-  elements.angle = document.getElementById("angle");
-  elements.angleOutput = document.getElementById("angle-output");
-  elements.density = document.getElementById("density");
-  elements.densityOutput = document.getElementById("density-output");
-  elements.format = document.getElementById("download-format");
-  elements.download = document.getElementById("download-button");
-  elements.reset = document.getElementById("reset-button");
-  elements.canvas = document.getElementById("preview-canvas");
-  elements.previewFrame = document.getElementById("preview-frame");
-  elements.placeholder = document.getElementById("preview-placeholder");
-  elements.clearImage = document.getElementById("clear-image-button");
-  elements.error = document.getElementById("error-message");
-  elements.meta = document.getElementById("image-meta");
-
-  state.exportCanvas = document.createElement("canvas");
+/* ===== Theme ===== */
+function initTheme() {
+  const saved = localStorage.getItem(CONFIG.THEME_KEY);
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+  } else {
+    const dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  }
+  updateThemeIcon();
 }
 
-function bindEvents() {
-  elements.upload.addEventListener("change", handleUpload);
-  elements.download.addEventListener("click", downloadImage);
-  elements.reset.addEventListener("click", resetControls);
-  elements.clearImage.addEventListener("click", clearImage);
-  elements.previewFrame.addEventListener("click", handlePreviewFrameClick);
-  elements.previewFrame.addEventListener("keydown", handlePreviewFrameKeydown);
-  elements.previewFrame.addEventListener("dragenter", handleDragEnter);
-  elements.previewFrame.addEventListener("dragover", handleDragOver);
-  elements.previewFrame.addEventListener("dragleave", handleDragLeave);
-  elements.previewFrame.addEventListener("drop", handleDrop);
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(CONFIG.THEME_KEY, next);
+  updateThemeIcon();
+}
 
-  const liveControls = [
-    elements.text,
-    elements.color,
-    elements.fontSize,
-    elements.opacity,
-    elements.angle,
-    elements.density,
-    elements.format,
-  ];
+function updateThemeIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  els.themeToggle.innerHTML = isDark ? SUN_SVG : MOON_SVG;
+  els.themeToggle.title = isDark ? 'Switch to light mode' : 'Switch to dark mode';
+}
 
-  liveControls.forEach((control) => {
-    control.addEventListener("input", handleControlChange);
-    control.addEventListener("change", handleControlChange);
+/* ===== Upload ===== */
+function initUpload() {
+  els.uploadZone.addEventListener('click', () => els.fileInput.click());
+  els.fileInput.addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (f && f.type.startsWith('image/')) loadImage(f);
   });
 
-  window.addEventListener("resize", handleResize);
-}
-
-function handlePreviewFrameClick(event) {
-  if (event.target === elements.clearImage) {
-    return;
-  }
-
-  elements.upload.click();
-}
-
-function handlePreviewFrameKeydown(event) {
-  if (event.key !== "Enter" && event.key !== " ") {
-    return;
-  }
-
-  event.preventDefault();
-  elements.upload.click();
-}
-
-function handleDragEnter(event) {
-  event.preventDefault();
-  if (state.image) {
-    return;
-  }
-  elements.previewFrame.classList.add("is-dragging");
-}
-
-function handleDragOver(event) {
-  event.preventDefault();
-  event.dataTransfer.dropEffect = "copy";
-  if (state.image) {
-    return;
-  }
-  elements.previewFrame.classList.add("is-dragging");
-}
-
-function handleDragLeave(event) {
-  if (elements.previewFrame.contains(event.relatedTarget)) {
-    return;
-  }
-
-  elements.previewFrame.classList.remove("is-dragging");
-}
-
-function handleDrop(event) {
-  event.preventDefault();
-  elements.previewFrame.classList.remove("is-dragging");
-  const file = event.dataTransfer?.files?.[0];
-
-  if (!file) {
-    return;
-  }
-
-  loadSelectedFile(file);
-}
-
-function handleControlChange() {
-  syncOutputs();
-  if (state.image) {
-    render();
-  }
-}
-
-function syncOutputs() {
-  elements.opacityOutput.value = Number(elements.opacity.value).toFixed(2);
-  elements.opacityOutput.textContent = Number(elements.opacity.value).toFixed(2);
-  elements.angleOutput.value = `${elements.angle.value} deg`;
-  elements.angleOutput.textContent = `${elements.angle.value} deg`;
-  elements.densityOutput.value = `${elements.density.value}%`;
-  elements.densityOutput.textContent = `${elements.density.value}%`;
-}
-
-function handleResize() {
-  if (!state.image) {
-    return;
-  }
-
-  cancelAnimationFrame(state.resizeFrame);
-  state.resizeFrame = requestAnimationFrame(() => {
-    renderPreview();
+  // Drag & drop on the entire canvas area
+  const canvasArea = $('.canvas-area');
+  canvasArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    els.uploadZone.classList.add('dragover');
   });
-}
-
-async function handleUpload(event) {
-  const file = event.target.files?.[0];
-  if (!file) {
-    return;
-  }
-
-  await loadSelectedFile(file);
-}
-
-async function loadSelectedFile(file) {
-  clearError();
-
-  if (!allowedTypes.has(file.type)) {
-    showError("Choose a PNG, JPEG, or WebP image.");
-    elements.upload.value = "";
-    return;
-  }
-
-  try {
-    if (state.objectUrl) {
-      URL.revokeObjectURL(state.objectUrl);
+  canvasArea.addEventListener('dragleave', (e) => {
+    if (!canvasArea.contains(e.relatedTarget)) {
+      els.uploadZone.classList.remove('dragover');
     }
-
-    state.objectUrl = URL.createObjectURL(file);
-    state.image = await loadImage(state.objectUrl);
-    elements.previewFrame.style.setProperty("--frame-ratio", `${state.image.naturalWidth} / ${state.image.naturalHeight}`);
-    elements.placeholder.hidden = true;
-    elements.canvas.hidden = false;
-    elements.download.disabled = false;
-    elements.clearImage.hidden = false;
-    elements.previewFrame.classList.add("has-image");
-    elements.meta.textContent = `${file.name} | ${state.image.naturalWidth} x ${state.image.naturalHeight}`;
-    render();
-  } catch (error) {
-    console.error(error);
-    clearImage();
-    showError("The selected image could not be loaded.");
-  }
-}
-
-function loadImage(source) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Image failed to load."));
-    image.src = source;
   });
-}
+  canvasArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    els.uploadZone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) loadImage(f);
+  });
 
-function readSettings() {
-  return {
-    text: elements.text.value.trim() || defaults.text,
-    color: elements.color.value,
-    fontSize: clampNumber(elements.fontSize.value, 10, 160, defaults.fontSize),
-    opacity: clampNumber(elements.opacity.value, 0.04, 0.9, defaults.opacity),
-    angle: clampNumber(elements.angle.value, -180, 180, defaults.angle),
-    density: clampNumber(elements.density.value, 10, 100, defaults.density),
-    format: elements.format.value,
-  };
-}
-
-function render() {
-  if (!state.image) {
-    return;
-  }
-
-  const settings = readSettings();
-  const canvas = state.exportCanvas;
-  const context = canvas.getContext("2d");
-
-  canvas.width = state.image.naturalWidth;
-  canvas.height = state.image.naturalHeight;
-
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(state.image, 0, 0);
-
-  const tile = buildPatternTile(settings, canvas.width, canvas.height);
-  const pattern = context.createPattern(tile, "repeat");
-
-  if (!pattern) {
-    showError("The watermark pattern could not be created in this browser.");
-    return;
-  }
-
-  context.fillStyle = pattern;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  renderPreview();
-}
-
-function renderPreview() {
-  if (!state.image) {
-    return;
-  }
-
-  const sourceCanvas = state.exportCanvas;
-  const previewCanvas = elements.canvas;
-  const previewContext = previewCanvas.getContext("2d");
-  const bounds = elements.previewFrame.getBoundingClientRect();
-  const maxWidth = Math.max(bounds.width - 36, 120);
-  const maxHeight = Math.max(bounds.height - 36, 120);
-  const scale = Math.min(maxWidth / sourceCanvas.width, maxHeight / sourceCanvas.height, 1);
-  const targetWidth = Math.max(Math.round(sourceCanvas.width * scale), 1);
-  const targetHeight = Math.max(Math.round(sourceCanvas.height * scale), 1);
-
-  previewCanvas.width = targetWidth;
-  previewCanvas.height = targetHeight;
-  previewCanvas.style.width = `${targetWidth}px`;
-  previewCanvas.style.height = `${targetHeight}px`;
-
-  previewContext.clearRect(0, 0, targetWidth, targetHeight);
-  previewContext.drawImage(sourceCanvas, 0, 0, targetWidth, targetHeight);
-}
-
-function buildPatternTile(settings, imageWidth, imageHeight) {
-  const spacing = getPatternSpacing(settings, imageWidth, imageHeight);
-  const tileCanvas = document.createElement("canvas");
-  tileCanvas.width = spacing.x;
-  tileCanvas.height = spacing.y;
-
-  const tileContext = tileCanvas.getContext("2d");
-  tileContext.clearRect(0, 0, tileCanvas.width, tileCanvas.height);
-  tileContext.translate(tileCanvas.width / 2, tileCanvas.height / 2);
-  tileContext.rotate(toRadians(settings.angle));
-  tileContext.font = `700 ${settings.fontSize}px Georgia, Times New Roman, serif`;
-  tileContext.textAlign = "center";
-  tileContext.textBaseline = "middle";
-  tileContext.fillStyle = hexToRgba(settings.color, settings.opacity);
-
-  const maxTextWidth = Math.max(tileCanvas.width * 0.78, settings.fontSize * 2.4);
-  const text = constrainText(tileContext, settings.text, maxTextWidth);
-  tileContext.fillText(text, 0, 0, maxTextWidth);
-
-  return tileCanvas;
-}
-
-function getPatternSpacing(settings, imageWidth, imageHeight) {
-  const densityRatio = settings.density / 100;
-  const widthBase = Math.max(settings.fontSize * 3.4, imageWidth * 0.18);
-  const widthRange = Math.max(settings.fontSize * 4.8, imageWidth * 0.34);
-  const heightBase = Math.max(settings.fontSize * 2.2, imageHeight * 0.12);
-  const heightRange = Math.max(settings.fontSize * 3.4, imageHeight * 0.2);
-
-  return {
-    x: Math.round(widthBase + (1 - densityRatio) * widthRange),
-    y: Math.round(heightBase + (1 - densityRatio) * heightRange),
-  };
-}
-
-function constrainText(context, value, maxWidth) {
-  if (maxWidth <= 16) {
-    return value.slice(0, 1);
-  }
-
-  if (context.measureText(value).width <= maxWidth) {
-    return value;
-  }
-
-  let nextValue = value;
-  while (nextValue.length > 1 && context.measureText(`${nextValue}...`).width > maxWidth) {
-    nextValue = nextValue.slice(0, -1);
-  }
-
-  return `${nextValue}...`;
-}
-
-function downloadImage() {
-  if (!state.image) {
-    return;
-  }
-
-  clearError();
-
-  const format = elements.format.value;
-  const extension = format === "image/jpeg" ? "jpg" : format === "image/webp" ? "webp" : "png";
-
-  state.exportCanvas.toBlob(
-    (blob) => {
-      if (!blob) {
-        showError("Export failed in this browser. Try PNG format.");
-        return;
+  // Paste from clipboard
+  document.addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) loadImage(f);
+        break;
       }
+    }
+  });
 
-      const downloadUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = downloadUrl;
-      anchor.download = `watermarked-image.${extension}`;
-      anchor.click();
-      URL.revokeObjectURL(downloadUrl);
-    },
-    format,
-    0.92
-  );
+  els.clearBtn.addEventListener('click', clearImage);
+}
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    state.imageDataURL = e.target.result;
+    createImageElement(state.imageDataURL);
+  };
+  reader.readAsDataURL(file);
+}
+
+function createImageElement(dataURL) {
+  const img = new Image();
+  img.onload = () => {
+    state.imageElement = img;
+    showPreview();
+    renderCanvas();
+    fitCanvasToArea();
+    saveState();
+  };
+  img.src = dataURL;
+}
+
+function showPreview() {
+  els.uploadZone.hidden = true;
+  els.previewContainer.hidden = false;
+  els.downloadBtn.disabled = false;
+  // Reset any manual resize — fitCanvasToArea will set the right size
+  els.canvas.style.width = '';
+  els.canvas.style.height = '';
+  els.canvas.style.maxWidth = '';
+  els.canvas.style.maxHeight = '';
+}
+
+/* Scale canvas CSS size to fill available space */
+function fitCanvasToArea() {
+  if (!state.imageElement) return;
+  const area = document.querySelector('.canvas-area');
+  const availW = (area.clientWidth - 64) * 0.75;  // 75% of area width
+  const availH = (area.clientHeight - 80) * 0.75; // 75% of area height
+  const imgW = state.imageElement.naturalWidth;
+  const imgH = state.imageElement.naturalHeight;
+  const aspect = imgW / imgH;
+
+  // Scale to fill as much of the available area as possible
+  let displayW, displayH;
+  if (availW / availH > aspect) {
+    // Area is wider than image — fit by height
+    displayH = availH;
+    displayW = displayH * aspect;
+  } else {
+    // Area is taller than image — fit by width
+    displayW = availW;
+    displayH = displayW / aspect;
+  }
+
+  displayW = Math.round(Math.max(displayW, 100));
+  displayH = Math.round(Math.max(displayH, 80));
+
+  els.canvas.style.maxWidth = 'none';
+  els.canvas.style.maxHeight = 'none';
+  els.canvas.style.width = displayW + 'px';
+  els.canvas.style.height = displayH + 'px';
 }
 
 function clearImage() {
-  if (state.objectUrl) {
-    URL.revokeObjectURL(state.objectUrl);
-    state.objectUrl = null;
-  }
-
-  state.image = null;
-  elements.upload.value = "";
-  elements.canvas.hidden = true;
-  elements.placeholder.hidden = false;
-  elements.clearImage.hidden = true;
-  elements.download.disabled = true;
-  elements.meta.textContent = "No image loaded";
-  elements.previewFrame.style.removeProperty("--frame-ratio");
-  elements.previewFrame.classList.remove("has-image");
-  elements.previewFrame.classList.remove("is-dragging");
-  clearError();
+  state.imageDataURL = null;
+  state.imageElement = null;
+  els.uploadZone.hidden = false;
+  els.previewContainer.hidden = true;
+  els.downloadBtn.disabled = true;
+  els.fileInput.value = '';
+  saveState();
 }
 
-function resetControls() {
-  elements.text.value = defaults.text;
-  elements.color.value = defaults.color;
-  elements.fontSize.value = String(defaults.fontSize);
-  elements.opacity.value = String(defaults.opacity);
-  elements.angle.value = String(defaults.angle);
-  elements.density.value = String(defaults.density);
-  elements.format.value = defaults.format;
-  syncOutputs();
-  clearError();
-  if (state.image) {
-    render();
+/* ===== Canvas Rendering ===== */
+let rafPending = false;
+
+function scheduleRender() {
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(() => {
+      renderCanvas();
+      rafPending = false;
+    });
   }
 }
 
-function showError(message) {
-  elements.error.hidden = false;
-  elements.error.textContent = message;
+function renderCanvas() {
+  if (!state.imageElement) return;
+  renderWatermark(els.canvas, state.imageElement, state.settings, CONFIG.MAX_DIM);
 }
 
-function clearError() {
-  elements.error.hidden = true;
-  elements.error.textContent = "";
-}
+function renderWatermark(canvas, img, s, maxDim) {
+  const ctx = canvas.getContext('2d');
+  let w = img.naturalWidth;
+  let h = img.naturalHeight;
 
-function clampNumber(value, min, max, fallback) {
-  const numeric = Number(value);
-  if (Number.isNaN(numeric)) {
-    return fallback;
+  if (maxDim && (w > maxDim || h > maxDim)) {
+    const scale = maxDim / Math.max(w, h);
+    w = Math.round(w * scale);
+    h = Math.round(h * scale);
+  }
+  canvas.width = w;
+  canvas.height = h;
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+
+  const text = s.text || CONFIG.DEFAULTS.text;
+  // Scale font size proportionally to image, with a base that ensures
+  // small fontSize values (10-34) still produce visible differences.
+  const baseScale = Math.max(w, h) / 1000;
+  const scaledFontSize = Math.max(8, Math.round(s.fontSize * baseScale));
+  ctx.font = `bold ${scaledFontSize}px sans-serif`;
+  ctx.fillStyle = s.color;
+  ctx.globalAlpha = s.opacity;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const textWidth = ctx.measureText(text).width;
+  const textHeight = scaledFontSize * 1.2;
+  // Density 1 = very sparse (6x spacing), density 15 = extremely tight (1.05x spacing)
+  // Uses an exponential curve so higher densities pack much tighter
+  const spacingMul = 1.05 + (6 - 1.05) * Math.pow((15 - s.density) / 14, 1.5);
+  const stepX = Math.max(textWidth * spacingMul, textWidth + 10);
+  const stepY = Math.max(textHeight * spacingMul, textHeight + 10);
+
+  const angleRad = (s.rotation * Math.PI) / 180;
+  const diag = Math.sqrt(w * w + h * h);
+  const startX = -diag / 2;
+  const startY = -diag / 2;
+  const endX = w + diag / 2;
+  const endY = h + diag / 2;
+
+  for (let y = startY; y < endY; y += stepY) {
+    for (let x = startX; x < endX; x += stepX) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angleRad);
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    }
   }
 
-  return Math.min(max, Math.max(min, numeric));
+  ctx.globalAlpha = 1.0;
 }
 
-function toRadians(value) {
-  return (value * Math.PI) / 180;
+/* ===== Controls ===== */
+function initControls() {
+  els.text.addEventListener('input', () => {
+    state.settings.text = els.text.value;
+    scheduleRender();
+    debouncedSave();
+  });
+
+  els.color.addEventListener('input', () => {
+    state.settings.color = els.color.value;
+    els.colorHex.value = els.color.value;
+    scheduleRender();
+    debouncedSave();
+  });
+
+  els.colorHex.addEventListener('change', () => {
+    let val = els.colorHex.value.trim();
+    if (/^#?[0-9a-fA-F]{6}$/.test(val)) {
+      if (!val.startsWith('#')) val = '#' + val;
+      state.settings.color = val;
+      els.color.value = val;
+      els.colorHex.value = val;
+      scheduleRender();
+      debouncedSave();
+    } else {
+      els.colorHex.value = state.settings.color;
+    }
+  });
+
+  const rangeControls = [
+    { el: els.opacity, key: 'opacity', display: els.opacityValue, parse: parseFloat },
+    { el: els.density, key: 'density', display: els.densityValue, parse: parseInt },
+    { el: els.rotation, key: 'rotation', display: els.rotationValue, parse: parseInt },
+    { el: els.fontSize, key: 'fontSize', display: els.fontSizeValue, parse: parseInt },
+  ];
+
+  rangeControls.forEach(({ el, key, display, parse }) => {
+    el.addEventListener('input', () => {
+      const val = parse(el.value);
+      state.settings[key] = val;
+      display.textContent = key === 'rotation' ? val + '\u00B0' : val;
+      scheduleRender();
+      debouncedSave();
+    });
+  });
+
+  els.resetBtn.addEventListener('click', () => {
+    state.settings = { ...CONFIG.DEFAULTS };
+    syncControlsFromState();
+    scheduleRender();
+    saveState();
+  });
 }
 
-function hexToRgba(hex, alpha) {
-  const sanitized = hex.replace("#", "");
-  const value = sanitized.length === 3
-    ? sanitized.split("").map((digit) => `${digit}${digit}`).join("")
-    : sanitized;
-  const red = Number.parseInt(value.slice(0, 2), 16);
-  const green = Number.parseInt(value.slice(2, 4), 16);
-  const blue = Number.parseInt(value.slice(4, 6), 16);
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+function syncControlsFromState() {
+  const s = state.settings;
+  els.text.value = s.text === CONFIG.DEFAULTS.text ? '' : s.text;
+  els.color.value = s.color;
+  els.colorHex.value = s.color;
+  els.opacity.value = s.opacity;
+  els.opacityValue.textContent = s.opacity;
+  els.density.value = s.density;
+  els.densityValue.textContent = s.density;
+  els.rotation.value = s.rotation;
+  els.rotationValue.textContent = s.rotation + '\u00B0';
+  els.fontSize.value = s.fontSize;
+  els.fontSizeValue.textContent = s.fontSize;
 }
 
-window.addEventListener("beforeunload", () => {
-  if (state.objectUrl) {
-    URL.revokeObjectURL(state.objectUrl);
+/* ===== Download ===== */
+function initDownload() {
+  els.downloadBtn.addEventListener('click', () => {
+    if (!state.imageElement) return;
+    const tempCanvas = document.createElement('canvas');
+    renderWatermark(tempCanvas, state.imageElement, state.settings, null);
+    const link = document.createElement('a');
+    link.download = 'watermarked-document.png';
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+/* ===== Persistence ===== */
+let saveTimer = null;
+function debouncedSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveState, 300);
+}
+
+function saveState() {
+  try {
+    const payload = {
+      timestamp: Date.now(),
+      settings: state.settings,
+      imageDataURL: state.imageDataURL,
+    };
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(payload));
+  } catch (e) {
+    try {
+      const payload = {
+        timestamp: Date.now(),
+        settings: state.settings,
+        imageDataURL: null,
+      };
+      localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(payload));
+    } catch (_) {}
   }
-});
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(CONFIG.STORAGE_KEY);
+    if (!raw) return;
+    const payload = JSON.parse(raw);
+
+    if (Date.now() - payload.timestamp > CONFIG.TTL_MS) {
+      localStorage.removeItem(CONFIG.STORAGE_KEY);
+      return;
+    }
+
+    if (payload.settings) {
+      state.settings = { ...CONFIG.DEFAULTS, ...payload.settings };
+    }
+    syncControlsFromState();
+
+    if (payload.imageDataURL) {
+      state.imageDataURL = payload.imageDataURL;
+      createImageElement(state.imageDataURL);
+    }
+  } catch (e) {
+    localStorage.removeItem(CONFIG.STORAGE_KEY);
+  }
+}
+
+/* ===== Resizable Preview ===== */
+function initResize() {
+  const container = els.previewContainer;
+  const canvas = els.canvas;
+  let isResizing = false;
+  let startX, startY, startW, startH;
+  const EDGE = 12; // px from edge to trigger resize cursor
+
+  function getEdge(e, rect) {
+    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    const r = x > rect.width - EDGE;
+    const b = y > rect.height - EDGE;
+    if (r && b) return 'se';
+    if (r) return 'e';
+    if (b) return 's';
+    return null;
+  }
+
+  function onPointerMove(e) {
+    if (isResizing) return;
+    const rect = canvas.getBoundingClientRect();
+    const edge = getEdge(e, rect);
+    if (edge === 'se') canvas.style.cursor = 'nwse-resize';
+    else if (edge === 'e') canvas.style.cursor = 'ew-resize';
+    else if (edge === 's') canvas.style.cursor = 'ns-resize';
+    else canvas.style.cursor = 'default';
+  }
+
+  function onPointerDown(e) {
+    const rect = canvas.getBoundingClientRect();
+    const edge = getEdge(e, rect);
+    if (!edge) return;
+    e.preventDefault();
+    isResizing = true;
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+    startY = e.touches ? e.touches[0].clientY : e.clientY;
+    startW = rect.width;
+    startH = rect.height;
+    const aspect = startW / startH;
+
+    function onMove(ev) {
+      ev.preventDefault();
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      let newW = startW, newH = startH;
+
+      if (edge === 'se' || edge === 'e') {
+        newW = Math.max(100, startW + (cx - startX));
+        newH = newW / aspect;
+      } else if (edge === 's') {
+        newH = Math.max(80, startH + (cy - startY));
+        newW = newH * aspect;
+      }
+
+      canvas.style.maxWidth = 'none';
+      canvas.style.maxHeight = 'none';
+      canvas.style.width = Math.round(newW) + 'px';
+      canvas.style.height = Math.round(newH) + 'px';
+    }
+
+    function onUp() {
+      isResizing = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }
+
+  canvas.addEventListener('mousemove', onPointerMove);
+  canvas.addEventListener('mousedown', onPointerDown);
+  canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+}
+
+/* ===== Init ===== */
+function init() {
+  cacheDom();
+  initTheme();
+  initUpload();
+  initControls();
+  initDownload();
+  initResize();
+  els.themeToggle.addEventListener('click', toggleTheme);
+
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (!localStorage.getItem(CONFIG.THEME_KEY)) {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      updateThemeIcon();
+    }
+  });
+
+  loadState();
+}
+
+document.addEventListener('DOMContentLoaded', init);
