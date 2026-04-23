@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Watermark</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <p class="eyebrow">Browser-only watermarking</p>
+        <h1>Watermark</h1>
+        <p class="summary">
+          Upload an image, tune a repeated watermark pattern, and download the result.
+          The full workflow stays local in your browser on desktop and mobile.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="panel controls-panel" aria-labelledby="controls-heading">
+          <div class="panel-heading">
+            <h2 id="controls-heading">Controls</h2>
+            <p class="panel-copy">Adjust the watermark pattern and export the current preview.</p>
+          </div>
+
+          <form id="watermark-form" class="controls-grid">
+            <div class="status-card" aria-live="polite">
+              <p class="status-title">Processing stays local</p>
+              <p class="status-copy">The selected image never leaves your browser. No backend and no cloud storage are used.</p>
+            </div>
+
+            <label class="control control-wide">
+              <span class="control-label">Watermark text</span>
+              <input id="watermark-text" name="watermark-text" type="text" maxlength="80" value="CONFIDENTIAL" />
+            </label>
+
+            <label class="control">
+              <span class="control-label">Text color</span>
+              <input id="watermark-color" name="watermark-color" type="color" value="#ffffff" />
+            </label>
+
+            <label class="control">
+              <span class="control-label">Font size</span>
+              <input id="font-size" name="font-size" type="number" min="10" max="160" step="1" value="36" />
+            </label>
+
+            <label class="control control-wide">
+              <span class="control-label">Opacity <output id="opacity-output" for="opacity">0.18</output></span>
+              <input id="opacity" name="opacity" type="range" min="0.04" max="0.9" step="0.01" value="0.18" />
+            </label>
+
+            <label class="control control-wide">
+              <span class="control-label">Angle <output id="angle-output" for="angle">-32°</output></span>
+              <input id="angle" name="angle" type="range" min="-180" max="180" step="1" value="-32" />
+            </label>
+
+            <label class="control control-wide">
+              <span class="control-label">Pattern density <output id="density-output" for="density">55%</output></span>
+              <input id="density" name="density" type="range" min="10" max="100" step="1" value="55" />
+              <span class="control-hint">Lower density makes fewer watermark repeats. Higher density packs more text across the image.</span>
+            </label>
+
+            <label class="control control-wide">
+              <span class="control-label">Download format</span>
+              <select id="download-format" name="download-format">
+                <option value="image/png">PNG</option>
+                <option value="image/jpeg">JPEG</option>
+                <option value="image/webp">WebP</option>
+              </select>
+            </label>
+
+            <div class="actions control-wide">
+              <button id="download-button" class="action-button" type="button" disabled>Download image</button>
+              <button id="reset-button" class="action-button action-button-secondary" type="button">Reset controls</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel preview-panel" aria-labelledby="preview-heading">
+          <div class="panel-heading panel-heading-row">
+            <div>
+              <h2 id="preview-heading">Preview</h2>
+              <p class="panel-copy">Drop an image here or tap the area to choose one. The canvas reflects the exact output that will be downloaded.</p>
+            </div>
+            <div class="image-meta" id="image-meta">No image loaded</div>
+          </div>
+
+          <input id="image-upload" name="image-upload" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+
+          <div id="preview-frame" class="preview-frame" role="button" tabindex="0" aria-label="Drop an image here or activate to choose an image">
+            <button id="clear-image-button" class="clear-image-button" type="button" hidden aria-label="Remove image">×</button>
+            <div id="preview-placeholder" class="preview-placeholder">
+              <div class="placeholder-copy">
+                <strong>Drop image here</strong>
+                <span>or click to choose a PNG, JPEG, or WebP file</span>
+              </div>
+            </div>
+            <canvas id="preview-canvas" class="preview-canvas" hidden></canvas>
+          </div>
+
+          <p id="error-message" class="error-message" hidden></p>
+        </section>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
