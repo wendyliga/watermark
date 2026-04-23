@@ -26,7 +26,7 @@ This project is intended to run entirely in the browser.
 - `app.js` contains the watermarking logic and UI behavior
 - `style.css` contains the app styling
 - `app.min.js` and `style.min.css` are minified assets
-- `minify.sh` is the helper script for generating minified files
+- `build.sh` generates the minified assets and copies distributable files into `dist/`
 
 ## Run Locally
 
@@ -44,4 +44,3 @@ This project is useful when you need a lightweight watermark tool that works loc
 This project is licensed under the MIT License.
 
 See [LICENSE](LICENSE) for the full text.
-
