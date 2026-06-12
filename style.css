@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Noto Sans Watermark';
+  src: url('vendor/fonts/NotoSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ===== CSS Custom Properties ===== */
 :root {
   --bg-primary: #f8f9fb;
@@ -315,6 +323,11 @@ input[type="range"]::-moz-range-thumb {
   font-family: inherit;
 }
 .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
 .btn--primary {
   background: var(--accent);
   color: #fff;
@@ -490,6 +503,57 @@ input[type="range"]::-moz-range-thumb {
   font-size: 12px;
   border-radius: var(--radius-xs);
 }
+.pdf-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.pdf-navigation .btn {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.page-indicator {
+  min-width: 92px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pdf-notice {
+  max-width: 480px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+}
+.document-status {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  z-index: 2;
+  max-width: min(560px, calc(100% - 40px));
+  padding: 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: 12px;
+  text-align: center;
+}
+.document-status[data-type="error"] {
+  border-color: rgba(239,68,68,0.35);
+  background: rgba(239,68,68,0.08);
+  color: var(--danger);
+}
+.document-status[data-type="loading"] {
+  border-color: var(--accent-glow);
+  color: var(--accent);
+}
 
 /* ===== Footer ===== */
 .app-footer {
@@ -529,7 +593,7 @@ input[type="range"]::-moz-range-thumb {
   }
   .canvas-area::before { display: none; }
   .canvas-wrapper canvas {
-    max-height: 50vh;
+    max-height: 42vh;
   }
   .upload-zone {
     padding: 40px 24px;
