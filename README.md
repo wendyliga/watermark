@@ -1,4 +1,4 @@
-# Watermark
+# Hello World
 
 Watermark is a local-only browser tool for applying a repeated text watermark to images and PDFs.
 
