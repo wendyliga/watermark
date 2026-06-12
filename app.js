@@ -518,7 +518,9 @@ function updatePdfUi() {
   const isPdf = state.documentType === 'pdf';
   els.pdfNavigation.hidden = !isPdf;
   els.pdfNotice.hidden = !isPdf;
-  els.downloadLabel.textContent = isPdf ? 'Download PDF' : 'Download PNG';
+  els.downloadLabel.textContent = isPdf
+    ? 'Download PDF'
+    : state.documentType === 'image' ? 'Download PNG' : 'Download';
 
   if (isPdf) {
     els.pageIndicator.textContent = `Page ${state.pdfPageNumber} of ${state.pdfPageCount}`;
