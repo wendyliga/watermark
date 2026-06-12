@@ -12,8 +12,8 @@ const CONFIG = {
   PDF_ICC_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/iccs/',
   PDF_STANDARD_FONT_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/standard_fonts/',
   PDF_WASM_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/wasm/',
-  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
-  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js',
+  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js',
+  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.es.min.js',
   WATERMARK_FONT_PATH: 'vendor/fonts/NotoSans-Bold.ttf',
   WATERMARK_FONT_FAMILY: 'Noto Sans Watermark',
   DEFAULTS: {
@@ -102,17 +102,6 @@ function assetUrl(path) {
   return new URL(path, document.baseURI).href;
 }
 
-function loadScript(path, globalName) {
-  if (window[globalName]) return Promise.resolve(window[globalName]);
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = path;
-    script.onload = () => resolve(window[globalName]);
-    script.onerror = () => reject(new Error(`Could not load ${path}.`));
-    document.head.appendChild(script);
-  });
-}
-
 async function loadPdfJs() {
   if (!pdfJsPromise) {
     pdfJsPromise = import(assetUrl(CONFIG.PDF_JS_PATH)).then((pdfjs) => {
@@ -129,8 +118,8 @@ async function loadPdfJs() {
 async function loadPdfExportLibs() {
   if (!pdfExportLibsPromise) {
     pdfExportLibsPromise = Promise.all([
-      loadScript(CONFIG.PDF_LIB_PATH, 'PDFLib'),
-      loadScript(CONFIG.FONTKIT_PATH, 'fontkit'),
+      import(assetUrl(CONFIG.PDF_LIB_PATH)),
+      import(assetUrl(CONFIG.FONTKIT_PATH)).then((module) => module.default),
       loadWatermarkFontBytes(),
     ]).then(([pdfLib, fontkit, fontBytes]) => ({ pdfLib, fontkit, fontBytes }))
       .catch(() => {
