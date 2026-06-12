@@ -326,21 +326,20 @@ function formatPdfError(error) {
   return error?.message || 'Could not load that PDF.';
 }
 
-async function clearPdfState() {
+function clearPdfState() {
   state.pdfRenderToken += 1;
-  if (state.pdfDocument) {
-    await state.pdfDocument.destroy();
-  }
+  const pdfDocument = state.pdfDocument;
   state.pdfBytes = null;
   state.pdfDocument = null;
   state.pdfPageCanvas = null;
   state.pdfPageNumber = 1;
   state.pdfPageCount = 0;
+  return pdfDocument?.destroy().catch(() => {});
 }
 
 async function clearDocument() {
   state.documentLoadToken += 1;
-  await clearPdfState();
+  const cleanup = clearPdfState();
   state.busy = false;
   state.documentType = null;
   state.sourceName = null;
@@ -353,6 +352,7 @@ async function clearDocument() {
   clearStatus();
   updatePdfUi();
   saveState();
+  await cleanup;
 }
 
 function showPreview() {
@@ -744,7 +744,6 @@ function downloadBlob(blob, filename) {
 function setBusy(busy, message = '') {
   state.busy = busy;
   els.downloadBtn.disabled = busy || !state.documentType;
-  els.clearDocument.disabled = busy;
   if (message) showStatus(message, 'loading');
   else if (els.documentStatus.dataset.type === 'loading') clearStatus();
   updatePdfUi();
