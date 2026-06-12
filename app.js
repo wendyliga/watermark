@@ -12,8 +12,8 @@ const CONFIG = {
   PDF_ICC_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/iccs/',
   PDF_STANDARD_FONT_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/standard_fonts/',
   PDF_WASM_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/wasm/',
-  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js',
-  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.es.min.js',
+  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm',
+  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm',
   WATERMARK_FONT_PATH: 'vendor/fonts/NotoSans-Bold.ttf',
   WATERMARK_FONT_FAMILY: 'Noto Sans Watermark',
   DEFAULTS: {
@@ -122,9 +122,9 @@ async function loadPdfExportLibs() {
       import(assetUrl(CONFIG.FONTKIT_PATH)).then((module) => module.default),
       loadWatermarkFontBytes(),
     ]).then(([pdfLib, fontkit, fontBytes]) => ({ pdfLib, fontkit, fontBytes }))
-      .catch(() => {
+      .catch((error) => {
         pdfExportLibsPromise = null;
-        throw new Error('Could not load PDF export libraries. Check your internet connection and try again.');
+        throw new Error(`Could not load PDF export libraries: ${error.message}`);
       });
   }
   return pdfExportLibsPromise;
