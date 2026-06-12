@@ -135,6 +135,9 @@ async function loadWatermarkFontBytes() {
     watermarkFontBytesPromise = fetch(CONFIG.WATERMARK_FONT_PATH).then((response) => {
       if (!response.ok) throw new Error('Could not load the bundled watermark font.');
       return response.arrayBuffer();
+    }).catch((error) => {
+      watermarkFontBytesPromise = null;
+      throw error;
     });
   }
   return watermarkFontBytesPromise;
