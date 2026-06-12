@@ -3,20 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="local-only browser tool for applying a repeated text watermark to an image">
+  <meta name="description" content="local-only browser tool for applying a repeated text watermark to images and PDFs">
   <meta name="application-name" content="Watermark">
   <meta property="og:title" content="Watermark">
-  <meta property="og:description" content="local-only browser tool for applying a repeated text watermark to an image">
+  <meta property="og:description" content="local-only browser tool for applying a repeated text watermark to images and PDFs">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Watermark">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Watermark">
-  <meta name="twitter:description" content="local-only browser tool for applying a repeated text watermark to an image">
+  <meta name="twitter:description" content="local-only browser tool for applying a repeated text watermark to images and PDFs">
   <title>Watermark</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.min.css" onerror="this.onerror=null;this.href='style.css'">
 </head>
 <body>
@@ -131,7 +128,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
           </svg>
-          Download PNG
+          <span id="download-label">Download PNG</span>
         </button>
         <button id="reset-btn" class="btn btn--ghost">Reset Settings</button>
       </div>
@@ -140,7 +137,7 @@
 
     <!-- Canvas Area (RIGHT) -->
     <div class="canvas-area">
-      <input type="file" id="file-input" accept="image/*" hidden>
+      <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.webp,.pdf,image/png,image/jpeg,image/webp,application/pdf" hidden>
 
       <!-- Upload Zone -->
       <div id="upload-zone" class="upload-zone">
@@ -151,18 +148,28 @@
         </div>
         <p class="upload-zone__text">Drop your document here, or click to browse</p>
         <p class="upload-zone__subtext">
-          Supports KTP, SIM, Passport images<br>
+          Supports PNG, JPEG, WebP, and PDF<br>
           Paste from clipboard with <span class="upload-zone__kbd">Ctrl+V</span>
         </p>
       </div>
+
+      <div id="document-status" class="document-status" role="status" aria-live="polite" hidden></div>
 
       <!-- Canvas Preview -->
       <div id="preview-container" class="preview-container" hidden>
         <div class="canvas-wrapper">
           <canvas id="preview-canvas"></canvas>
         </div>
+        <div id="pdf-navigation" class="pdf-navigation" hidden>
+          <button id="previous-page" class="btn btn--ghost btn--small" type="button">Previous</button>
+          <span id="page-indicator" class="page-indicator"></span>
+          <button id="next-page" class="btn btn--ghost btn--small" type="button">Next</button>
+        </div>
+        <p id="pdf-notice" class="pdf-notice" hidden>
+          PDF export watermarks every page and invalidates existing digital signatures.
+        </p>
         <div class="preview-actions">
-          <button id="clear-image" class="btn btn--danger-ghost btn--small">
+          <button id="clear-document" class="btn btn--danger-ghost btn--small">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width:14px;height:14px">
               <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
             </svg>

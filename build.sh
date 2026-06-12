@@ -54,5 +54,6 @@ echo "Copying assets to dist..."
 find "$DIR" -maxdepth 1 -type f \
   \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.svg' \) \
   -exec cp {} "$DIST_DIR"/ \;
+cp -R "$DIR/vendor" "$DIST_DIR"/
 
 echo "Build complete: $DIST_DIR"
