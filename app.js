@@ -231,15 +231,12 @@ function loadImage(file, token) {
   };
   reader.onload = (e) => {
     if (token !== state.documentLoadToken) return;
-    state.documentType = 'image';
-    state.sourceName = file.name || 'document';
-    state.imageDataURL = e.target.result;
-    createImageElement(state.imageDataURL, token);
+    createImageElement(e.target.result, token, file.name || 'document');
   };
   reader.readAsDataURL(file);
 }
 
-function createImageElement(dataURL, token = state.documentLoadToken) {
+function createImageElement(dataURL, token = state.documentLoadToken, sourceName = 'document') {
   const img = new Image();
   img.onerror = () => {
     if (token !== state.documentLoadToken) return;
@@ -251,6 +248,8 @@ function createImageElement(dataURL, token = state.documentLoadToken) {
     await clearPdfState();
     if (token !== state.documentLoadToken) return;
     state.documentType = 'image';
+    state.sourceName = sourceName;
+    state.imageDataURL = dataURL;
     state.imageElement = img;
     await ensureCanvasFont();
     if (token !== state.documentLoadToken) return;
@@ -685,7 +684,8 @@ function drawPdfWatermark(page, font, color, settings, degrees) {
   const layout = getWatermarkLayout(visibleWidth, visibleHeight, settings, (text, size) => {
     return font.widthOfTextAtSize(text, size);
   });
-  const angle = ((settings.rotation + pageRotation) * Math.PI) / 180;
+  const pdfRotation = pageRotation - settings.rotation;
+  const angle = (pdfRotation * Math.PI) / 180;
   const baselineOffset = layout.fontSize * 0.35;
 
   for (let y = layout.startY; y < layout.endY; y += layout.stepY) {
@@ -698,7 +698,7 @@ function drawPdfWatermark(page, font, color, settings, degrees) {
         font,
         color,
         opacity: settings.opacity,
-        rotate: degrees(settings.rotation + pageRotation),
+        rotate: degrees(pdfRotation),
       });
     }
   }
@@ -706,15 +706,15 @@ function drawPdfWatermark(page, font, color, settings, degrees) {
 
 function visibleToPdfPoint(x, y, crop, rotation) {
   if (rotation === 90) {
-    return { x: crop.x + crop.width - y, y: crop.y + x };
+    return { x: crop.x + y, y: crop.y + x };
   }
   if (rotation === 180) {
-    return { x: crop.x + crop.width - x, y: crop.y + crop.height - y };
+    return { x: crop.x + crop.width - x, y: crop.y + y };
   }
   if (rotation === 270) {
-    return { x: crop.x + y, y: crop.y + crop.height - x };
+    return { x: crop.x + crop.width - y, y: crop.y + crop.height - x };
   }
-  return { x: crop.x + x, y: crop.y + y };
+  return { x: crop.x + x, y: crop.y + crop.height - y };
 }
 
 function hexToPdfColor(hex, rgb) {
