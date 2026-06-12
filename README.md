@@ -28,7 +28,7 @@ This project is intended to run entirely in the browser.
 - `app.js` contains the watermarking logic and UI behavior
 - `style.css` contains the app styling
 - `app.min.js` and `style.min.css` are minified assets
-- `vendor/` contains pinned PDF libraries, support data, the watermark font, and licenses
+- `vendor/` contains the bundled watermark font and its license
 - `build.sh` generates the minified assets and copies distributable files into `dist/`
 
 ## Run Locally
@@ -39,6 +39,7 @@ Because this is a static browser app, it can be hosted by any static file server
 2. Open `http://localhost:8000`.
 
 PDF support requires HTTP or HTTPS because its worker is loaded as a module.
+It also requires internet access to load pinned PDF libraries from jsDelivr.
 
 ## PDF Notes
 
@@ -46,6 +47,8 @@ PDF support requires HTTP or HTTPS because its worker is loaded as a module.
 - Exporting a PDF invalidates any existing digital signatures.
 - PDF bytes are held in memory only and are not stored in `localStorage`.
 - PDF preview uses PDF.js; PDF export uses pdf-lib and a bundled Noto Sans font.
+- PDF libraries and support assets are loaded from pinned jsDelivr URLs. Uploaded
+  document bytes are not sent to the CDN.
 
 ## Use Case
 

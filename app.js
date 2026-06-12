@@ -6,14 +6,14 @@ const CONFIG = {
   MAX_DIM: 4096,
   MAX_PDF_BYTES: 50 * 1024 * 1024,
   MAX_PDF_PAGES: 100,
-  PDF_JS_PATH: 'vendor/pdfjs/pdf.mjs',
-  PDF_WORKER_PATH: 'vendor/pdfjs/pdf.worker.mjs',
-  PDF_CMAP_PATH: 'vendor/pdfjs/cmaps/',
-  PDF_ICC_PATH: 'vendor/pdfjs/iccs/',
-  PDF_STANDARD_FONT_PATH: 'vendor/pdfjs/standard_fonts/',
-  PDF_WASM_PATH: 'vendor/pdfjs/wasm/',
-  PDF_LIB_PATH: 'vendor/pdf-lib/pdf-lib.min.js',
-  FONTKIT_PATH: 'vendor/pdf-lib/fontkit.umd.min.js',
+  PDF_JS_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.mjs',
+  PDF_WORKER_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.worker.mjs',
+  PDF_CMAP_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/cmaps/',
+  PDF_ICC_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/iccs/',
+  PDF_STANDARD_FONT_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/standard_fonts/',
+  PDF_WASM_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/wasm/',
+  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js',
   WATERMARK_FONT_PATH: 'vendor/fonts/NotoSans-Bold.ttf',
   WATERMARK_FONT_FAMILY: 'Noto Sans Watermark',
   DEFAULTS: {
@@ -118,6 +118,9 @@ async function loadPdfJs() {
     pdfJsPromise = import(assetUrl(CONFIG.PDF_JS_PATH)).then((pdfjs) => {
       pdfjs.GlobalWorkerOptions.workerSrc = assetUrl(CONFIG.PDF_WORKER_PATH);
       return pdfjs;
+    }).catch(() => {
+      pdfJsPromise = null;
+      throw new Error('Could not load PDF preview libraries. Check your internet connection and try again.');
     });
   }
   return pdfJsPromise;
@@ -129,7 +132,11 @@ async function loadPdfExportLibs() {
       loadScript(CONFIG.PDF_LIB_PATH, 'PDFLib'),
       loadScript(CONFIG.FONTKIT_PATH, 'fontkit'),
       loadWatermarkFontBytes(),
-    ]).then(([pdfLib, fontkit, fontBytes]) => ({ pdfLib, fontkit, fontBytes }));
+    ]).then(([pdfLib, fontkit, fontBytes]) => ({ pdfLib, fontkit, fontBytes }))
+      .catch(() => {
+        pdfExportLibsPromise = null;
+        throw new Error('Could not load PDF export libraries. Check your internet connection and try again.');
+      });
   }
   return pdfExportLibsPromise;
 }
