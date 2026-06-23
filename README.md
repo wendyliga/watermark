@@ -41,6 +41,26 @@ Because this is a static browser app, it can be hosted by any static file server
 PDF support requires HTTP or HTTPS because its worker is loaded as a module.
 The PDF libraries and support assets are bundled locally in `vendor/`.
 
+## Updating Vendored Dependencies
+
+PDF.js, pdf-lib, and fontkit are vendored so the app does not load PDF code from
+a third-party CDN at runtime. To refresh them to the latest npm releases:
+
+```bash
+./update-vendor.sh
+./build.sh
+```
+
+To update to specific versions instead:
+
+```bash
+PDFJS_VERSION=6.0.227 PDF_LIB_VERSION=1.17.1 FONTKIT_VERSION=1.1.1 ./update-vendor.sh
+./build.sh
+```
+
+After updating, test PDF preview and PDF export before committing the vendor
+changes.
+
 ## PDF Notes
 
 - Password-protected PDFs are not supported.
