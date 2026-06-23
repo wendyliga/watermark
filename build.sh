@@ -71,7 +71,7 @@ github_repo_url() {
   elif [[ "$remote_url" =~ ^https://github\.com/.+ ]]; then
     printf '%s\n' "$remote_url"
   else
-    perl -ne 'if (m|href="(https://github\.com/[^"/]+/[^"/#?]+)"|) { print $1; exit }' "$DIR/index.html"
+    printf 'https://github.com/wendyliga/watermark\n'
   fi
 }
 
