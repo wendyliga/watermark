@@ -45,10 +45,26 @@ minify() {
   echo "  app.js:    ${JS_ORIG}B -> app.min.js:    ${JS_MIN}B"
 }
 
+integrity_hash() {
+  openssl dgst -sha384 -binary "$1" | openssl base64 -A
+}
+
+update_integrity() {
+  echo "Updating SRI hashes..."
+  CSS_INTEGRITY="sha384-$(integrity_hash "$DIR/style.min.css")"
+  JS_INTEGRITY="sha384-$(integrity_hash "$DIR/app.min.js")"
+
+  CSS_INTEGRITY="$CSS_INTEGRITY" JS_INTEGRITY="$JS_INTEGRITY" perl -0pi -e '
+    s|<link rel="stylesheet" href="style\.min\.css"(?: integrity="sha384-[^"]+")?>|<link rel="stylesheet" href="style.min.css" integrity="$ENV{CSS_INTEGRITY}">|g;
+    s|<script src="app\.min\.js"(?: integrity="sha384-[^"]+")?></script>|<script src="app.min.js" integrity="$ENV{JS_INTEGRITY}"></script>|g;
+  ' "$DIR/index.html"
+}
+
 echo "Creating dist directory..."
 mkdir -p "$DIST_DIR"
 
 minify
+update_integrity
 
 echo "Copying assets to dist..."
 find "$DIR" -maxdepth 1 -type f \
