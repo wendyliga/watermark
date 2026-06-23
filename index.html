@@ -14,7 +14,7 @@
   <meta name="twitter:description" content="local-only browser tool for applying a repeated text watermark to images and PDFs">
   <title>Watermark</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="stylesheet" href="style.min.css" onerror="this.onerror=null;this.href='style.css'">
+  <link rel="stylesheet" href="style.min.css" integrity="sha384-t9ZAKHxZCbU46J2UJiExeG7i6PDk0I4gB7NKT3UdFJziUD5oI4DuVZBi9aCIwt6h">
 </head>
 <body>
 
@@ -180,12 +180,12 @@
 
       <div class="app-footer">
         Documents are processed locally in your browser — no files are uploaded.<br>
-        This website was built with the assistance of AI.
+        <span id="build-version">Version <a href="https://github.com/wendyliga/watermark/commit/becd91c0c516cdda9228b26c0327610c5f07b6bd" target="_blank" rel="noreferrer">becd91c0c516</a></span>
       </div>
     </div>
 
   </div>
 
-  <script src="app.min.js" onerror="var s=document.createElement('script');s.src='app.js';document.body.appendChild(s);"></script>
+  <script src="app.min.js" integrity="sha384-SZRFbJRN01NQBvJZjzz7EyiT4vC45979jmJ6f5FH+620+RauUzcqn0HYVNueldcd"></script>
 </body>
 </html>

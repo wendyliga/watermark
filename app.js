@@ -6,14 +6,14 @@ const CONFIG = {
   MAX_DIM: 4096,
   MAX_PDF_BYTES: 50 * 1024 * 1024,
   MAX_PDF_PAGES: 100,
-  PDF_JS_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.mjs',
-  PDF_WORKER_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/build/pdf.worker.mjs',
-  PDF_CMAP_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/cmaps/',
-  PDF_ICC_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/iccs/',
-  PDF_STANDARD_FONT_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/standard_fonts/',
-  PDF_WASM_PATH: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.0.227/wasm/',
-  PDF_LIB_PATH: 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/+esm',
-  FONTKIT_PATH: 'https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/+esm',
+  PDF_JS_PATH: 'vendor/pdfjs-dist/build/pdf.mjs',
+  PDF_WORKER_PATH: 'vendor/pdfjs-dist/build/pdf.worker.mjs',
+  PDF_CMAP_PATH: 'vendor/pdfjs-dist/cmaps/',
+  PDF_ICC_PATH: 'vendor/pdfjs-dist/iccs/',
+  PDF_STANDARD_FONT_PATH: 'vendor/pdfjs-dist/standard_fonts/',
+  PDF_WASM_PATH: 'vendor/pdfjs-dist/wasm/',
+  PDF_LIB_PATH: 'vendor/pdf-lib/pdf-lib.esm.js',
+  FONTKIT_PATH: 'vendor/fontkit/fontkit.umd.js',
   WATERMARK_FONT_PATH: 'vendor/fonts/NotoSans-Bold.ttf',
   WATERMARK_FONT_FAMILY: 'Noto Sans Watermark',
   DEFAULTS: {
@@ -68,6 +68,7 @@ const state = {
 
 let pdfJsPromise = null;
 let pdfExportLibsPromise = null;
+let fontkitPromise = null;
 let watermarkFontBytesPromise = null;
 let rafPending = false;
 let saveTimer = null;
@@ -109,7 +110,7 @@ async function loadPdfJs() {
       return pdfjs;
     }).catch(() => {
       pdfJsPromise = null;
-      throw new Error('Could not load PDF preview libraries. Check your internet connection and try again.');
+      throw new Error('Could not load the bundled PDF preview libraries.');
     });
   }
   return pdfJsPromise;
@@ -119,7 +120,7 @@ async function loadPdfExportLibs() {
   if (!pdfExportLibsPromise) {
     pdfExportLibsPromise = Promise.all([
       import(assetUrl(CONFIG.PDF_LIB_PATH)),
-      import(assetUrl(CONFIG.FONTKIT_PATH)).then((module) => module.default),
+      loadFontkit(),
       loadWatermarkFontBytes(),
     ]).then(([pdfLib, fontkit, fontBytes]) => ({ pdfLib, fontkit, fontBytes }))
       .catch((error) => {
@@ -128,6 +129,30 @@ async function loadPdfExportLibs() {
       });
   }
   return pdfExportLibsPromise;
+}
+
+async function loadFontkit() {
+  if (!fontkitPromise) {
+    fontkitPromise = loadScript(assetUrl(CONFIG.FONTKIT_PATH)).then(() => {
+      if (!window.fontkit) throw new Error('Bundled fontkit did not initialize.');
+      return window.fontkit;
+    }).catch((error) => {
+      fontkitPromise = null;
+      throw error;
+    });
+  }
+  return fontkitPromise;
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error(`Could not load ${src}.`));
+    document.head.appendChild(script);
+  });
 }
 
 async function loadWatermarkFontBytes() {
@@ -314,6 +339,9 @@ function formatPdfError(error) {
   }
   if (error?.name === 'InvalidPDFException') {
     return 'That PDF is corrupt or invalid.';
+  }
+  if (/encrypted/i.test(error?.message || '')) {
+    return 'This PDF is encrypted or has editing restrictions, so it cannot be exported with a watermark.';
   }
   return error?.message || 'Could not load that PDF.';
 }
