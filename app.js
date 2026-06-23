@@ -672,6 +672,7 @@ async function downloadPdf() {
   try {
     const { pdfLib, fontkit, fontBytes } = await loadPdfExportLibs();
     const pdfDocument = await pdfLib.PDFDocument.load(sourceBytes, {
+      ignoreEncryption: true,
       updateMetadata: false,
     });
     pdfDocument.registerFontkit(fontkit);

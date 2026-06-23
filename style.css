@@ -565,8 +565,15 @@ input[type="range"]::-moz-range-thumb {
   color: var(--text-tertiary);
   font-size: 11px;
   z-index: 1;
-  pointer-events: none;
   white-space: nowrap;
+}
+.app-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.app-footer a:hover {
+  color: var(--accent);
 }
 
 /* ===== Hidden utility ===== */
@@ -590,6 +597,8 @@ input[type="range"]::-moz-range-thumb {
   .canvas-area {
     min-height: 50vh;
     padding: 20px;
+    flex-direction: column;
+    gap: 14px;
   }
   .canvas-area::before { display: none; }
   .canvas-wrapper canvas {
@@ -601,5 +610,11 @@ input[type="range"]::-moz-range-thumb {
   }
   .app-header { padding: 0 16px; height: 48px; }
   .app-title { font-size: 14px; }
-  .app-footer { display: none; }
+  .app-footer {
+    position: static;
+    transform: none;
+    max-width: 100%;
+    line-height: 1.45;
+    white-space: normal;
+  }
 }
