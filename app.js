@@ -340,6 +340,9 @@ function formatPdfError(error) {
   if (error?.name === 'InvalidPDFException') {
     return 'That PDF is corrupt or invalid.';
   }
+  if (/encrypted/i.test(error?.message || '')) {
+    return 'This PDF is encrypted or has editing restrictions, so it cannot be exported with a watermark.';
+  }
   return error?.message || 'Could not load that PDF.';
 }
 
@@ -672,7 +675,6 @@ async function downloadPdf() {
   try {
     const { pdfLib, fontkit, fontBytes } = await loadPdfExportLibs();
     const pdfDocument = await pdfLib.PDFDocument.load(sourceBytes, {
-      ignoreEncryption: true,
       updateMetadata: false,
     });
     pdfDocument.registerFontkit(fontkit);
