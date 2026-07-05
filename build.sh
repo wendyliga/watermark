@@ -118,7 +118,7 @@ update_integrity
 
 echo "Copying assets to dist..."
 find "$DIR" -maxdepth 1 -type f \
-  \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.svg' \) \
+  \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.svg' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' -o -name '*.webp' \) \
   -exec cp {} "$DIST_DIR"/ \;
 rm -rf "$DIST_DIR/vendor"
 cp -R "$DIR/vendor" "$DIST_DIR"/
